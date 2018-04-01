@@ -16,7 +16,7 @@ public class Base64Formatter {
 
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
 
-        int dimension = 1280;
+        int dimension = 600;
         bmp = ThumbnailUtils.extractThumbnail(bmp, dimension, dimension);
 
         bmp.compress(Bitmap.CompressFormat.JPEG, 50, stream);
