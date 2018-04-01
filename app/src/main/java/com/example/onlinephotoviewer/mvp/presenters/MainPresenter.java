@@ -1,10 +1,8 @@
 package com.example.onlinephotoviewer.mvp.presenters;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
-import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.support.annotation.NonNull;
@@ -25,8 +23,6 @@ import java.io.File;
 import java.util.Calendar;
 
 import io.realm.Realm;
-import io.realm.RealmObject;
-import io.realm.RealmResults;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;

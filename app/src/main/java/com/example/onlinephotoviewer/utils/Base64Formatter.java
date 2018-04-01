@@ -6,7 +6,6 @@ import android.media.ThumbnailUtils;
 import android.util.Base64;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 
 /**
  * Created by Andrei on 31.03.2018.

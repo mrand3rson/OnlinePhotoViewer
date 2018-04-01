@@ -3,10 +3,7 @@ package com.example.onlinephotoviewer.mvp.models;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import java.util.List;
-
 import io.realm.RealmObject;
-import io.realm.annotations.Ignore;
 import io.realm.annotations.PrimaryKey;
 
 /**
@@ -86,8 +83,3 @@ public class ApiImageOut extends RealmObject implements Parcelable {
         }
     };
 }
-//    date (integer),
-//    id (integer),
-//    lat (number),
-//    lng (number),
-//    url (string)

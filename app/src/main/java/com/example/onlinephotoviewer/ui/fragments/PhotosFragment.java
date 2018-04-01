@@ -124,7 +124,7 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
 
     @Override
     public void onSuccessQuery() {
-//        Toast.makeText(getActivity(), "SUCCESS LOADING LIST", Toast.LENGTH_SHORT).show();
+
     }
 
     @Override

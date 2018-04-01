@@ -11,7 +11,6 @@ import android.widget.TextView;
 
 import com.example.onlinephotoviewer.R;
 import com.example.onlinephotoviewer.mvp.models.ApiCommentOut;
-import com.example.onlinephotoviewer.mvp.models.ApiImageOut;
 import com.example.onlinephotoviewer.ui.fragments.DetailsActivity;
 import com.example.onlinephotoviewer.utils.DateFormatter;
 

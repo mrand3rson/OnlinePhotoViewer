@@ -143,7 +143,7 @@ public class DetailsActivity extends MvpAppCompatActivity implements DetailsView
 
     @Override
     public void onSuccessQuery() {
-//        Toast.makeText(this, "Success", Toast.LENGTH_SHORT).show();
+
     }
 
     @Override

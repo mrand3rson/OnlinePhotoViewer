@@ -18,7 +18,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.onlinephotoviewer.R;
-import com.example.onlinephotoviewer.mvp.models.ApiCommentOut;
 import com.example.onlinephotoviewer.mvp.models.ApiImageOut;
 import com.example.onlinephotoviewer.ui.activities.MainActivity;
 import com.example.onlinephotoviewer.ui.fragments.DetailsActivity;
@@ -77,7 +76,6 @@ public class ImagesAdapter extends RecyclerView.Adapter<ImagesAdapter.ViewHolder
 
                     }
                 });
-//        holder.tv.setText("");
     }
 
 
@@ -146,8 +144,7 @@ public class ImagesAdapter extends RecyclerView.Adapter<ImagesAdapter.ViewHolder
             ActivityOptionsCompat options =
                     ActivityOptionsCompat.makeSceneTransitionAnimation(
                             (Activity) context,
-                            Pair.create((View) iv, "imagest"));//,
-//                            Pair.create(tv, "textest"));
+                            Pair.create((View) iv, "imagest"));
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             ((BitmapDrawable)iv.getDrawable()).getBitmap()
                     .compress(Bitmap.CompressFormat.JPEG, 100, stream);

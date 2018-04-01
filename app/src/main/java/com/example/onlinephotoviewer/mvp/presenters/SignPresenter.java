@@ -2,7 +2,6 @@ package com.example.onlinephotoviewer.mvp.presenters;
 
 import com.arellomobile.mvp.InjectViewState;
 import com.arellomobile.mvp.MvpPresenter;
-import com.arellomobile.mvp.presenter.InjectPresenter;
 import com.example.onlinephotoviewer.mvp.models.SignUserOut;
 import com.example.onlinephotoviewer.mvp.views.SignView;
 

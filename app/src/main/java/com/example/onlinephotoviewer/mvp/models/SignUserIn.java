@@ -21,8 +21,8 @@ public class SignUserIn {
         this.password = password;
     }
 
-    String login;
-    String password;
+    private String login;
+    private String password;
 
     public SignUserIn(String login, String password) {
         this.login = login;

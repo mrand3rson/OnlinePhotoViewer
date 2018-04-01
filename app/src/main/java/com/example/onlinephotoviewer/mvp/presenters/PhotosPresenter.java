@@ -1,7 +1,6 @@
 package com.example.onlinephotoviewer.mvp.presenters;
 
 import android.support.annotation.NonNull;
-import android.support.v4.widget.SearchViewCompat;
 
 import com.arellomobile.mvp.InjectViewState;
 import com.arellomobile.mvp.MvpPresenter;
@@ -11,7 +10,6 @@ import com.example.onlinephotoviewer.mvp.models.ApiCommentOut;
 import com.example.onlinephotoviewer.mvp.models.ApiImageOut;
 import com.example.onlinephotoviewer.mvp.models.ApiResponse;
 import com.example.onlinephotoviewer.mvp.views.PhotosView;
-import com.google.android.gms.tasks.Task;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,7 +23,6 @@ import java.util.concurrent.Future;
 import io.realm.Realm;
 import io.realm.RealmList;
 import io.realm.RealmResults;
-import okhttp3.internal.http2.Http2Connection;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;

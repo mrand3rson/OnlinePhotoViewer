@@ -25,9 +25,6 @@ import retrofit2.Response;
 @InjectViewState
 public class DetailsPresenter extends MvpPresenter<DetailsView> {
 
-    public static final int VIEW_ON_REFRESH = -2;
-    public static final int VIEW_ON_DELETE = -1;
-
     public void setApiImage(ApiImageOut apiImage) {
         this.apiImage = apiImage;
     }
