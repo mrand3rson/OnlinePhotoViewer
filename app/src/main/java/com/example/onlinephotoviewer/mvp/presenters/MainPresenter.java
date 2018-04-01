@@ -14,7 +14,6 @@ import com.example.onlinephotoviewer.app.PhotoViewerApi;
 import com.example.onlinephotoviewer.mvp.models.ApiImageIn;
 import com.example.onlinephotoviewer.mvp.models.ApiImageOut;
 import com.example.onlinephotoviewer.mvp.models.ApiResponse;
-import com.example.onlinephotoviewer.mvp.models.SignUserOut;
 import com.example.onlinephotoviewer.mvp.views.MainView;
 import com.example.onlinephotoviewer.utils.Base64Formatter;
 import com.example.onlinephotoviewer.utils.DateFormatter;
@@ -22,7 +21,6 @@ import com.example.onlinephotoviewer.utils.DateFormatter;
 import java.io.File;
 import java.util.Calendar;
 
-import io.realm.Realm;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -94,13 +92,5 @@ public class MainPresenter extends MvpPresenter<MainView> {
                 getViewState().onFailedUploading(t.getMessage());
             }
         });
-    }
-
-    public void saveLastSession(final SignUserOut user) {
-        Realm realm = Realm.getDefaultInstance();
-        realm.beginTransaction();
-        realm.delete(SignUserOut.class);
-        realm.copyToRealm(user);
-        realm.commitTransaction();
     }
 }

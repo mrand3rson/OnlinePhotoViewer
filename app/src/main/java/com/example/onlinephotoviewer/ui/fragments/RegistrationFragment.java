@@ -13,9 +13,11 @@ import android.widget.Toast;
 import com.arellomobile.mvp.MvpAppCompatFragment;
 import com.arellomobile.mvp.presenter.InjectPresenter;
 import com.example.onlinephotoviewer.R;
+import com.example.onlinephotoviewer.app.MyApplication;
 import com.example.onlinephotoviewer.mvp.presenters.RegistrationPresenter;
 import com.example.onlinephotoviewer.mvp.views.RegistrationView;
 import com.example.onlinephotoviewer.ui.activities.MainActivity;
+import com.example.onlinephotoviewer.ui.activities.SignActivity;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -81,7 +83,11 @@ public class RegistrationFragment extends MvpAppCompatFragment implements Regist
 
     @Override
     public void failedSignUp(String message) {
-        Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+        if (!((MyApplication)getActivity().getApplication()).isOnline()) {
+            Toast.makeText(getActivity(), R.string.warning_offline, Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -99,6 +105,7 @@ public class RegistrationFragment extends MvpAppCompatFragment implements Regist
     @Override
     public void successSignUp() {
         final Intent intent = new Intent(getActivity(), MainActivity.class);
+        ((SignActivity)getActivity()).getSignPresenter().saveLastSession(MyApplication.getUserInfo());
         startActivity(intent);
         getActivity().finish();
     }

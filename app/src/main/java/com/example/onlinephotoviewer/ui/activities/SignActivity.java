@@ -33,6 +33,10 @@ public class SignActivity extends MvpAppCompatActivity implements SignView {
     @BindView(R.id.tabs)
     TabLayout mTabLayout;
 
+    public SignPresenter getSignPresenter() {
+        return mSignPresenter;
+    }
+
     @InjectPresenter
     SignPresenter mSignPresenter;
 

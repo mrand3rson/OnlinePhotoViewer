@@ -28,4 +28,12 @@ public class SignPresenter extends MvpPresenter<SignView> {
 
         return user;
     }
+
+    public void saveLastSession(final SignUserOut user) {
+        Realm realm = Realm.getDefaultInstance();
+        realm.beginTransaction();
+        realm.delete(SignUserOut.class);
+        realm.copyToRealm(user);
+        realm.commitTransaction();
+    }
 }
