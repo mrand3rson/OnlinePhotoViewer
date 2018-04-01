@@ -19,11 +19,10 @@ public interface PhotosView extends MvpView {
     void onSuccessQuery();
     void onFailedQuery(String message);
 
-    void setupAdapter(List<ApiImageOut> data);
-
-
+    void viewImages(int page);
     void addImage(ApiImageOut apiImage);
-    void viewImages();
+
+    void refreshPhotosOnLoad(List<ApiImageOut> data);
     void refreshPhotosOnAdd(ApiImageOut apiImage);
     void refreshPhotosOnDelete(ApiImageOut apiImage);
     void onHasConnectedComments();
