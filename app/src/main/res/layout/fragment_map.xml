@@ -6,9 +6,10 @@
     android:weightSum="10">
 
     <com.google.android.gms.maps.MapView
+        android:id="@+id/map"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="5">
+        android:layout_height="match_parent">
+        <!--android:layout_weight="5">-->
 
     </com.google.android.gms.maps.MapView>
 

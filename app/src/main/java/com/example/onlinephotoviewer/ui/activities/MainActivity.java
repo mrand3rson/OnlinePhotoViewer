@@ -30,6 +30,7 @@ import com.example.onlinephotoviewer.mvp.presenters.MainPresenter;
 import com.example.onlinephotoviewer.mvp.views.MainView;
 import com.example.onlinephotoviewer.ui.fragments.MapFragment;
 import com.example.onlinephotoviewer.ui.fragments.PhotosFragment;
+import com.google.android.gms.maps.model.LatLng;
 
 import java.io.File;
 
@@ -56,6 +57,7 @@ public class MainActivity extends MvpAppCompatActivity
 
     private Location mLocation;
     private PhotosFragment mPhotosFragment;
+
     private MapFragment mMapFragment;
 
 
@@ -74,7 +76,6 @@ public class MainActivity extends MvpAppCompatActivity
         setContentView(R.layout.activity_main);
 
         ButterKnife.bind(this);
-//        ButterKnife.bind(mUserName, mNavigationView);
 
         setSupportActionBar(mToolbar);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -102,7 +103,8 @@ public class MainActivity extends MvpAppCompatActivity
                     .replace(R.id.content_main, mPhotosFragment)
                     .commit();
         } else if (id == R.id.nav_map) {
-            mMapFragment = new MapFragment();
+            mMapFragment = MapFragment.newInstance(mPhotosFragment.getPhotosPresenter().getData());
+
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.content_main, mMapFragment)
                     .commit();
