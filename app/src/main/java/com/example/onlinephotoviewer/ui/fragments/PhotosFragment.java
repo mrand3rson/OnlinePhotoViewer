@@ -90,7 +90,7 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
 
     @Override
     public void onHasConnectedComments() {
-        Toast.makeText(getActivity(), "Cannot delete when has comments", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getActivity(), "Deleting comments...", Toast.LENGTH_SHORT).show();
     }
 
     private void toggleLoading(boolean toggle) {

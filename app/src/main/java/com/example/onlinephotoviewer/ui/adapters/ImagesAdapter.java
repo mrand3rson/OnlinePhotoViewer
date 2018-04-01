@@ -67,15 +67,14 @@ public class ImagesAdapter extends RecyclerView.Adapter<ImagesAdapter.ViewHolder
                             @Override
                             public void onClick(View view) {
                                 holder.showImageDetails(
-                                        data.get(position));
+                                        data.get(holder.getAdapterPosition()));
                             }
                         });
                     }
 
                     @Override
                     public void onError() {
-                        if (true)
-                            return;
+
                     }
                 });
 //        holder.tv.setText("");

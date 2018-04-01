@@ -16,6 +16,11 @@ import com.google.android.gms.tasks.Task;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import io.realm.Realm;
 import io.realm.RealmList;
@@ -99,13 +104,22 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
             public void onResponse(@NonNull Call<ApiResponse<List<ApiCommentOut>>> call,
                                    @NonNull Response<ApiResponse<List<ApiCommentOut>>> response) {
                 if (response.errorBody() == null) {
-                    if (response.body().data.size() == 0) {
-                        deletePhoto(service, apiImage);
-                    } else {
+                    if (response.body().data.size() != 0) {
                         getViewState().onHasConnectedComments();
+                        try {
+                            if (!deleteComments(service, apiImage, response.body().data)) {
+                                getViewState().onFailedQuery("Some comments failed to delete");
+                                return;
+                            }
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                            return;
+                        }
                     }
-                } else {
 
+                    deletePhoto(service, apiImage);
+                } else {
+                    getViewState().onFailedQuery("Error while getting comments");
                 }
             }
 
@@ -115,6 +129,53 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
 
             }
         });
+    }
+
+    private boolean deleteComments(final PhotoViewerApi service,
+                                final ApiImageOut apiImage,
+                                final List<ApiCommentOut> comments) throws InterruptedException {
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Callable<Boolean> callable = new Callable<Boolean>() {
+            @Override
+            public Boolean call() {
+                for (ApiCommentOut comment : comments) {
+                    if (!deleteComment(service, apiImage, comment)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        };
+        boolean deletedAll = false;
+
+        Future<Boolean> future = executor.submit(callable);
+        try {
+            deletedAll = future.get();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        executor.shutdown();
+        return deletedAll;
+    }
+
+    private boolean deleteComment(PhotoViewerApi service,
+                               ApiImageOut apiImage,
+                               ApiCommentOut apiComment) {
+
+        Call<ApiResponse<ApiCommentOut>> call =
+                service.deleteComment(MyApplication.getUserInfo().getToken(),
+                        apiComment.getId(),
+                        apiImage.getId());
+        Response<ApiResponse<ApiCommentOut>> response;
+        try {
+            response = call.execute();
+            return response.errorBody() == null;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+
     }
 
     private void deletePhoto(final PhotoViewerApi service,
