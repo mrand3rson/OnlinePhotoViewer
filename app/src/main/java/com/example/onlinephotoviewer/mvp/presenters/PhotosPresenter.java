@@ -21,8 +21,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import io.realm.Realm;
-import io.realm.RealmList;
 import io.realm.RealmResults;
+import io.realm.Sort;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -56,6 +56,7 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
                     ApiResponse<List<ApiImageOut>> out = response.body();
                     getViewState().refreshPhotosOnLoad(out.data);
                     data = out.data;
+                    deleteImagesFromDatabase();
                     getViewState().onSuccessQuery();
                 } else {
                     getViewState().onFailedQuery(null);
@@ -164,8 +165,6 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
 
                 if (response.errorBody() == null) {
                     getViewState().onSuccessQuery();
-
-                    deleteImageFromDatabase(apiImage);
                     getViewState().refreshPhotosOnDelete(apiImage);
                 } else {
 
@@ -190,7 +189,10 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
             public void execute(@NonNull Realm bgRealm) {
                 int start = page*PER_PAGE;
                 int end = start + PER_PAGE;
-                RealmResults<ApiImageOut> apiImages = bgRealm.where(ApiImageOut.class).findAll();
+                RealmResults<ApiImageOut> apiImages = bgRealm.where(ApiImageOut.class)
+                        .findAll()
+                        .sort("id", Sort.DESCENDING);
+
                 if (end > apiImages.size()) {
                     data = bgRealm.copyFromRealm(apiImages).subList(start, apiImages.size());
                 } else {
@@ -207,25 +209,17 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
         });
     }
 
-    public void insertImageIntoDatabase(final ApiImageOut apiImage) {
-        Realm realm = Realm.getDefaultInstance();
-        realm.beginTransaction();
-        realm.copyToRealm(apiImage);
-        realm.commitTransaction();
-    }
-
-    public void updateImagesInDatabase(List<ApiImageOut> data) {
+    public void insertImagesIntoDatabase(List<ApiImageOut> data) {
         Realm realm = Realm.getDefaultInstance();
         realm.beginTransaction();
         realm.copyToRealmOrUpdate(data);
         realm.commitTransaction();
     }
 
-    private void deleteImageFromDatabase(final ApiImageOut apiImage) {
+    private void deleteImagesFromDatabase() {
         Realm realm = Realm.getDefaultInstance();
         realm.beginTransaction();
-        realm.where(ApiImageOut.class).equalTo("id", apiImage.getId())
-                .findFirst().deleteFromRealm();
+        realm.delete(ApiImageOut.class);
         realm.commitTransaction();
     }
 }
