@@ -89,7 +89,7 @@ public class MainActivity extends MvpAppCompatActivity
         mNavigationView.setNavigationItemSelectedListener(this);
         onNavigationItemSelected(mNavigationView.getMenu().getItem(0));
 
-        if (((MyApplication)getApplication()).isOnline())
+        if (!((MyApplication)getApplication()).isOnline())
             Toast.makeText(this, R.string.warning_mode_offline, Toast.LENGTH_SHORT).show();
     }
 
@@ -176,7 +176,15 @@ public class MainActivity extends MvpAppCompatActivity
                 if (mLocation != null)
                     mMainPresenter.uploadImage(mLocation);
                 else {
-                    Toast.makeText(this, "Cannot get location", Toast.LENGTH_SHORT).show();
+                    LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+                    Location location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+                    if (location != null) {
+                        mMainPresenter.uploadImage(location);
+                    }
+                    else {
+                        Toast.makeText(this, "Cannot get location", Toast.LENGTH_SHORT).show();
+                    }
                 }
             }
         }
@@ -198,12 +206,6 @@ public class MainActivity extends MvpAppCompatActivity
     @Override
     public void onFailedUploading(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        mMainPresenter.saveLastSession(MyApplication.getUserInfo());
     }
 
     public void deletePhoto(ApiImageOut apiImageOut) {
