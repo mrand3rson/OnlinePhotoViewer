@@ -24,7 +24,6 @@ import com.example.onlinephotoviewer.mvp.models.ApiImageOut;
 import com.example.onlinephotoviewer.ui.activities.MainActivity;
 import com.example.onlinephotoviewer.ui.fragments.DetailsActivity;
 import com.example.onlinephotoviewer.utils.Base64Formatter;
-import com.squareup.picasso.MemoryPolicy;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 
@@ -142,20 +141,23 @@ public class ImagesAdapter extends RecyclerView.Adapter<ImagesAdapter.ViewHolder
             cv.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
                 public boolean onLongClick(View view) {
+                    ViewHolder.this.setIsRecyclable(true);
                     new AlertDialog.Builder(context)
                             .setCancelable(false)
                             .setPositiveButton(android.R.string.yes,
                                     new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialogInterface, int i) {
-                                            ((MainActivity)context).deletePhoto(
-                                                    data.get(getAdapterPosition()));
+                                                ((MainActivity) context).deletePhoto(
+                                                        data.get(getAdapterPosition()));
+                                                ViewHolder.this.cv.setOnClickListener(null);
                                         }
                                     })
                             .setNegativeButton(android.R.string.no,
                                     new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialogInterface, int i) {
+                                            ViewHolder.this.setIsRecyclable(false);
                                             dialogInterface.dismiss();
                                         }
                                     })
@@ -171,7 +173,6 @@ public class ImagesAdapter extends RecyclerView.Adapter<ImagesAdapter.ViewHolder
                 public void onBitmapLoaded(final Bitmap bitmap, Picasso.LoadedFrom from) {
                     iv.setImageBitmap(bitmap);
 
-//                    if (from == Picasso.LoadedFrom.NETWORK) {
                     if (getAdapterPosition() != -1) {
                         if (data.get(getAdapterPosition()).getBase64Image() == null) {
                             final ApiImageOut apiImage = data.get(getAdapterPosition());
@@ -184,7 +185,6 @@ public class ImagesAdapter extends RecyclerView.Adapter<ImagesAdapter.ViewHolder
                             }).start();
                         }
                     }
-//                    }
 
 
                     cv.setOnClickListener(new View.OnClickListener() {
