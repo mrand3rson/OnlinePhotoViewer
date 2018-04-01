@@ -27,6 +27,8 @@ import butterknife.ButterKnife;
 
 public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
 
+    private final int ITEMS_PER_PAGE = 20;
+
     @BindView(R.id.progress_bar)
     ProgressBar mProgress;
 
@@ -53,8 +55,31 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
         View v = inflater.inflate(R.layout.fragment_photos, container, false);
         ButterKnife.bind(this, v);
         mProgress.setVisibility(View.GONE);
-        viewImages();
+
+        setupRecycler();
+        viewImages(0);
         return v;
+    }
+
+    private void setupRecycler() {
+        final RecyclerView.LayoutManager gridLayoutManager = new GridLayoutManager(getActivity(), 3);
+        mRecycler.setLayoutManager(gridLayoutManager);
+        mRecycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView,
+                                             int newState) {
+
+                super.onScrollStateChanged(recyclerView, newState);
+
+                if (!recyclerView.canScrollVertically(1)) {
+                    boolean fullPage = (gridLayoutManager.getItemCount() % ITEMS_PER_PAGE) == 0;
+                    if (fullPage) {
+                        int page = gridLayoutManager.getItemCount() / ITEMS_PER_PAGE;
+                        PhotosFragment.this.viewImages(page);
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -64,12 +89,22 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
     }
 
     @Override
-    public void viewImages() {
+    public void viewImages(int page) {
         if (((MyApplication)getActivity().getApplication()).isOnline()) {
-            mPhotosPresenter.loadPhotosFromServer();
+            mPhotosPresenter.loadPhotosFromServer(page);
         } else {
-            mPhotosPresenter.loadImagesFromDatabase();
-            Toast.makeText(getActivity(), R.string.warning_mode_offline, Toast.LENGTH_SHORT).show();
+            mPhotosPresenter.loadImagesFromDatabase(page, ITEMS_PER_PAGE);
+        }
+    }
+
+    @Override
+    public void refreshPhotosOnLoad(List<ApiImageOut> data) {
+        if (mAdapter == null) {
+            mAdapter = new ImagesAdapter(getActivity(), R.layout.recycler_grid_row, data);
+            mRecycler.setAdapter(mAdapter);
+        } else {
+            mAdapter.getData().addAll(data);
+            mAdapter.notifyItemRangeInserted(mAdapter.getItemCount(), data.size());
         }
     }
 
@@ -114,15 +149,6 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
     }
 
     @Override
-    public void setupAdapter(List<ApiImageOut> data) {
-        RecyclerView.LayoutManager gridLayoutManager = new GridLayoutManager(getActivity(), 1);
-        mRecycler.setLayoutManager(gridLayoutManager);
-
-        mAdapter = new ImagesAdapter(getActivity(), R.layout.recycler_grid_row, data);
-        mRecycler.setAdapter(mAdapter);
-    }
-
-    @Override
     public void onSuccessQuery() {
 
     }
@@ -130,5 +156,11 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
     @Override
     public void onFailedQuery(String message) {
         Toast.makeText(getActivity(), "Failed", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mPhotosPresenter.updateImagesInDatabase(mAdapter.getData());
     }
 }
