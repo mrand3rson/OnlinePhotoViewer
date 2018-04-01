@@ -71,11 +71,11 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
 
                 super.onScrollStateChanged(recyclerView, newState);
 
-                if (!recyclerView.canScrollVertically(1)) {
-                    boolean fullPage = (gridLayoutManager.getItemCount() % ITEMS_PER_PAGE) == 0;
-                    if (fullPage) {
-                        int page = gridLayoutManager.getItemCount() / ITEMS_PER_PAGE;
-                        PhotosFragment.this.viewImages(page);
+                if (!mRecycler.canScrollVertically(1)) {
+                    int unfinishedPage = (mAdapter.getItemCount() % ITEMS_PER_PAGE > 0? 1: 0);
+                    int newPage = mAdapter.getItemCount() / ITEMS_PER_PAGE + unfinishedPage;
+                    if (mAdapter.getItemCount() >= newPage *ITEMS_PER_PAGE) {
+                        PhotosFragment.this.viewImages(newPage);
                     }
                 }
             }
@@ -84,7 +84,6 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
 
     @Override
     public void addImage(ApiImageOut apiImage) {
-        mPhotosPresenter.insertImageIntoDatabase(apiImage);
         refreshPhotosOnAdd(apiImage);
     }
 
@@ -103,8 +102,10 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
             mAdapter = new ImagesAdapter(getActivity(), R.layout.recycler_grid_row, data);
             mRecycler.setAdapter(mAdapter);
         } else {
-            mAdapter.getData().addAll(data);
-            mAdapter.notifyItemRangeInserted(mAdapter.getItemCount(), data.size());
+            int offset = mAdapter.getItemCount() % ITEMS_PER_PAGE;
+            List<ApiImageOut> filteredData = data.subList(offset, data.size());
+            mAdapter.getData().addAll(filteredData);
+            mAdapter.notifyItemRangeInserted(mAdapter.getItemCount(), data.size()-offset);
         }
     }
 
@@ -159,8 +160,8 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
-        mPhotosPresenter.updateImagesInDatabase(mAdapter.getData());
+    public void onStop() {
+        mPhotosPresenter.insertImagesIntoDatabase(mAdapter.getData());
+        super.onStop();
     }
 }
