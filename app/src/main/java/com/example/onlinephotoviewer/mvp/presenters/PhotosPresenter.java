@@ -45,17 +45,16 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
 
     }
 
-    public void loadPhotosFromServer() {
+    public void loadPhotosFromServer(int page) {
         PhotoViewerApi service = MyApplication.getRetrofit().create(PhotoViewerApi.class);
-        Call<ApiResponse<List<ApiImageOut>>> call = service.getImages(MyApplication.getUserInfo().getToken(), 0);
+        Call<ApiResponse<List<ApiImageOut>>> call = service.getImages(MyApplication.getUserInfo().getToken(), page);
         call.enqueue(new Callback<ApiResponse<List<ApiImageOut>>>() {
             @Override
             public void onResponse(@NonNull Call<ApiResponse<List<ApiImageOut>>> call,
                                    @NonNull Response<ApiResponse<List<ApiImageOut>>> response) {
                 if (response.errorBody() == null) {
                     ApiResponse<List<ApiImageOut>> out = response.body();
-                    getViewState().setupAdapter(out.data);
-                    updateImagesInDatabase(out.data);
+                    getViewState().refreshPhotosOnLoad(out.data);
                     data = out.data;
                     getViewState().onSuccessQuery();
                 } else {
@@ -67,27 +66,6 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
             public void onFailure(@NonNull Call<ApiResponse<List<ApiImageOut>>> call, @NonNull Throwable t) {
 
                 getViewState().onFailedQuery(null);
-            }
-        });
-    }
-
-    public void loadImagesFromDatabase() {
-        final Realm realm = Realm.getDefaultInstance();
-        getViewState().startLoadingData();
-
-        realm.executeTransactionAsync(new Realm.Transaction() {
-            @Override
-            public void execute(@NonNull Realm bgRealm) {
-                RealmList<ApiImageOut> list = new RealmList<>();
-                RealmResults<ApiImageOut> apiImages = bgRealm.where(ApiImageOut.class).findAll();
-                data = bgRealm.copyFromRealm(apiImages);
-            }
-        }, new Realm.Transaction.OnSuccess() {
-            @Override
-            public void onSuccess() {
-                getViewState().setupAdapter(data);
-                getViewState().finishLoadingData();
-                realm.close();
             }
         });
     }
@@ -203,6 +181,32 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
         });
     }
 
+    public void loadImagesFromDatabase(final int page, final int PER_PAGE) {
+        final Realm realm = Realm.getDefaultInstance();
+        getViewState().startLoadingData();
+
+        realm.executeTransactionAsync(new Realm.Transaction() {
+            @Override
+            public void execute(@NonNull Realm bgRealm) {
+                int start = page*PER_PAGE;
+                int end = start + PER_PAGE;
+                RealmResults<ApiImageOut> apiImages = bgRealm.where(ApiImageOut.class).findAll();
+                if (end > apiImages.size()) {
+                    data = bgRealm.copyFromRealm(apiImages).subList(start, apiImages.size());
+                } else {
+                    data = bgRealm.copyFromRealm(apiImages).subList(start, end);
+                }
+            }
+        }, new Realm.Transaction.OnSuccess() {
+            @Override
+            public void onSuccess() {
+                getViewState().refreshPhotosOnLoad(data);
+                getViewState().finishLoadingData();
+                realm.close();
+            }
+        });
+    }
+
     public void insertImageIntoDatabase(final ApiImageOut apiImage) {
         Realm realm = Realm.getDefaultInstance();
         realm.beginTransaction();
@@ -210,7 +214,7 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
         realm.commitTransaction();
     }
 
-    private void updateImagesInDatabase(List<ApiImageOut> data) {
+    public void updateImagesInDatabase(List<ApiImageOut> data) {
         Realm realm = Realm.getDefaultInstance();
         realm.beginTransaction();
         realm.copyToRealmOrUpdate(data);

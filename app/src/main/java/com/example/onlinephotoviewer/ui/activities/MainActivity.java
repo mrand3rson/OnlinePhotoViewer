@@ -88,39 +88,50 @@ public class MainActivity extends MvpAppCompatActivity
 
         mNavigationView.setNavigationItemSelectedListener(this);
         onNavigationItemSelected(mNavigationView.getMenu().getItem(0));
+
+        if (((MyApplication)getApplication()).isOnline())
+            Toast.makeText(this, R.string.warning_mode_offline, Toast.LENGTH_SHORT).show();
     }
 
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+        boolean select = true;
         int id = item.getItemId();
-
         if (id == R.id.nav_photos) {
             mPhotosFragment = new PhotosFragment();
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.content_main, mPhotosFragment)
                     .commit();
         } else if (id == R.id.nav_map) {
-            mMapFragment = MapFragment.newInstance(mPhotosFragment.getPhotosPresenter().getData());
+            if (((MyApplication)getApplication()).isOnline()) {
+                mMapFragment = MapFragment.newInstance(mPhotosFragment.getPhotosPresenter().getData());
 
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.content_main, mMapFragment)
-                    .commit();
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.content_main, mMapFragment)
+                        .commit();
+            } else {
+                select = false;
+                Toast.makeText(this, R.string.warning_mode_offline, Toast.LENGTH_SHORT).show();
+            }
         }
         mDrawer.closeDrawer(GravityCompat.START);
-        return true;
+        return select;
     }
 
     @OnClick(R.id.fab)
     public void takePhoto() {
+        if (((MyApplication)getApplication()).isOnline()) {
+            listenLocation();
 
-        listenLocation();
-
-        Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
-        Uri fileUri = mMainPresenter.getOutputMediaFileUri();
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
-        startActivityForResult(intent, TAKE_PHOTO);
+            Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
+            Uri fileUri = mMainPresenter.getOutputMediaFileUri();
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
+            startActivityForResult(intent, TAKE_PHOTO);
+        } else {
+            Toast.makeText(this, R.string.warning_mode_offline, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void listenLocation() {
@@ -162,10 +173,8 @@ public class MainActivity extends MvpAppCompatActivity
                         != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
-                LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-                Location location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                if (location != null)
-                    mMainPresenter.uploadImage(location);
+                if (mLocation != null)
+                    mMainPresenter.uploadImage(mLocation);
                 else {
                     Toast.makeText(this, "Cannot get location", Toast.LENGTH_SHORT).show();
                 }

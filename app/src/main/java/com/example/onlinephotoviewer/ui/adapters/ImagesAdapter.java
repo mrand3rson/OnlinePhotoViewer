@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.util.Pair;
 import android.support.v7.widget.CardView;
@@ -18,14 +19,22 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.onlinephotoviewer.R;
+import com.example.onlinephotoviewer.app.MyApplication;
 import com.example.onlinephotoviewer.mvp.models.ApiImageOut;
 import com.example.onlinephotoviewer.ui.activities.MainActivity;
 import com.example.onlinephotoviewer.ui.fragments.DetailsActivity;
-import com.squareup.picasso.Callback;
+import com.example.onlinephotoviewer.utils.Base64Formatter;
+import com.squareup.picasso.MemoryPolicy;
 import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Target;
 
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -56,29 +65,48 @@ public class ImagesAdapter extends RecyclerView.Adapter<ImagesAdapter.ViewHolder
 
     @Override
     public void onBindViewHolder(final ViewHolder holder, final int position) {
-        Picasso.with(context)
-                .load(data.get(position).getUrl())
-                .priority(position < data.size() / 2? Picasso.Priority.HIGH: Picasso.Priority.LOW)
-                .into(holder.iv, new Callback() {
-                    @Override
-                    public void onSuccess() {
-                        holder.cv.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                holder.showImageDetails(
-                                        data.get(holder.getAdapterPosition()));
-                            }
-                        });
-                    }
+        holder.setIsRecyclable(false);
 
-                    @Override
-                    public void onError() {
+        if (!((MyApplication)(
+                (Activity)context)
+                .getApplication()).isOnline()) {
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            Callable<Bitmap> callable = new Callable<Bitmap>() {
+                @Override
+                public Bitmap call() {
+                    String base64 = data.get(holder.getAdapterPosition())
+                            .getBase64Image();
+                    if (base64 != null)
+                        return Base64Formatter.decodeBase64(base64);
+                    else
+                        return null;
+                }
+            };
+            Future<Bitmap> future = executor.submit(callable);
 
-                    }
-                });
+            try {
+                Bitmap bmp = future.get();
+                if (bmp != null)
+                    holder.iv.setImageBitmap(bmp);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+            executor.shutdown();
+        } else {
+            Picasso.with(context)
+                    .load(data.get(position).getUrl())
+                    .placeholder(android.R.drawable.arrow_down_float)
+                    .priority(position < data.size() / 2 ? Picasso.Priority.HIGH : Picasso.Priority.LOW)
+                    .into(holder.target);
+        }
     }
 
-
+    @Override
+    public long getItemId(int position) {
+        return position;
+    }
 
     @Override
     public int getItemCount() {
@@ -104,6 +132,8 @@ public class ImagesAdapter extends RecyclerView.Adapter<ImagesAdapter.ViewHolder
 
         @BindView(R.id.image)
         ImageView iv;
+
+        Target target;
 
         ViewHolder(View v) {
             super(v);
@@ -135,6 +165,42 @@ public class ImagesAdapter extends RecyclerView.Adapter<ImagesAdapter.ViewHolder
                     return false;
                 }
             });
+
+            target = new Target() {
+                @Override
+                public void onBitmapLoaded(final Bitmap bitmap, Picasso.LoadedFrom from) {
+                    iv.setImageBitmap(bitmap);
+
+//                    if (from == Picasso.LoadedFrom.NETWORK) {
+                    if (getAdapterPosition() != -1) {
+                        if (data.get(getAdapterPosition()).getBase64Image() == null) {
+                            final ApiImageOut apiImage = data.get(getAdapterPosition());
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    String base64 = Base64Formatter.convertToBase64(bitmap);
+                                    apiImage.setBase64Image(base64);
+                                }
+                            }).start();
+                        }
+                    }
+//                    }
+
+
+                    cv.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            showImageDetails(
+                                    data.get(getAdapterPosition()));
+                        }
+                    });
+                }
+                @Override
+                public void onBitmapFailed(Drawable errorDrawable) {}
+                @Override
+                public void onPrepareLoad(Drawable placeHolderDrawable) {}
+
+            };
         }
 
         private void showImageDetails(ApiImageOut apiImageOut) {

@@ -31,12 +31,22 @@ public class ApiImageOut extends RealmObject implements Parcelable {
         return url;
     }
 
+    public String getBase64Image() {
+        return base64Image;
+    }
+
+    public void setBase64Image(String base64Image) {
+        this.base64Image = base64Image;
+    }
+
     @PrimaryKey
     private int id;
     private int date;
     private double lat;
     private double lng;
     private String url;
+
+    private String base64Image;
 
 
     public ApiImageOut() {
@@ -58,6 +68,7 @@ public class ApiImageOut extends RealmObject implements Parcelable {
         lng = parcel.readDouble();
         url = parcel.readString();
     }
+
 
     @Override
     public int describeContents() {
