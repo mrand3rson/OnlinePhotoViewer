@@ -1,6 +1,7 @@
 package com.example.onlinephotoviewer.mvp.presenters;
 
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import com.arellomobile.mvp.InjectViewState;
 import com.arellomobile.mvp.MvpPresenter;
@@ -8,8 +9,10 @@ import com.example.onlinephotoviewer.app.MyApplication;
 import com.example.onlinephotoviewer.app.PhotoViewerApi;
 import com.example.onlinephotoviewer.mvp.models.ApiCommentOut;
 import com.example.onlinephotoviewer.mvp.models.ApiImageOut;
-import com.example.onlinephotoviewer.mvp.models.ApiResponse;
+import com.example.onlinephotoviewer.mvp.models.response.ApiResponseError;
+import com.example.onlinephotoviewer.mvp.models.response.ApiResponseSuccess;
 import com.example.onlinephotoviewer.mvp.views.PhotosView;
+import com.example.onlinephotoviewer.utils.ErrorResponseCreator;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,12 +37,19 @@ import retrofit2.Response;
 @InjectViewState
 public class PhotosPresenter extends MvpPresenter<PhotosView> {
 
+    private final static String LABEL_DEBUG = "Photos debug";
+    private final static String DEBUG_GET_IMAGES = "onFailure getImages()";
+    private final static String DEBUG_GET_COMMENTS = "onFailure getComments()";
+    private final static String DEBUG_DELETE_IMAGE = "onFailure deleteImage()";
+    private final static String EXCEPTION_DELETE_IMAGE = "Exception while deleting comments";
+    private final static String EXCEPTION_DELETE_COMMENT = "Exception on delete comment query";
+
     public List<ApiImageOut> getData() {
         return data;
     }
 
     private List<ApiImageOut> data = new ArrayList<>();
-    private List<ApiCommentOut> comments;
+
 
     public PhotosPresenter() {
 
@@ -47,62 +57,69 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
 
     public void loadPhotosFromServer(int page) {
         PhotoViewerApi service = MyApplication.getRetrofit().create(PhotoViewerApi.class);
-        Call<ApiResponse<List<ApiImageOut>>> call = service.getImages(MyApplication.getUserInfo().getToken(), page);
-        call.enqueue(new Callback<ApiResponse<List<ApiImageOut>>>() {
+        Call<ApiResponseSuccess<List<ApiImageOut>>> call = service.getImages(MyApplication.getUserInfo().getToken(), page);
+        call.enqueue(new Callback<ApiResponseSuccess<List<ApiImageOut>>>() {
             @Override
-            public void onResponse(@NonNull Call<ApiResponse<List<ApiImageOut>>> call,
-                                   @NonNull Response<ApiResponse<List<ApiImageOut>>> response) {
-                if (response.errorBody() == null) {
-                    ApiResponse<List<ApiImageOut>> out = response.body();
+            public void onResponse(@NonNull Call<ApiResponseSuccess<List<ApiImageOut>>> call,
+                                   @NonNull Response<ApiResponseSuccess<List<ApiImageOut>>> response) {
+                if (response.isSuccessful()) {
+                    ApiResponseSuccess<List<ApiImageOut>> out = response.body();
                     getViewState().refreshPhotosOnLoad(out.data);
                     data = out.data;
                     deleteImagesFromDatabase();
                     getViewState().onSuccessQuery();
                 } else {
-                    getViewState().onFailedQuery(null);
+                    ApiResponseError errorResponse = ErrorResponseCreator.create(response);
+                    if (errorResponse != null) {
+                        getViewState().onErrorResponse(errorResponse.getError());
+                    }
                 }
             }
 
             @Override
-            public void onFailure(@NonNull Call<ApiResponse<List<ApiImageOut>>> call, @NonNull Throwable t) {
-
-                getViewState().onFailedQuery(null);
+            public void onFailure(@NonNull Call<ApiResponseSuccess<List<ApiImageOut>>> call, @NonNull Throwable t) {
+                getViewState().onFailedQuery();
+                Log.d(LABEL_DEBUG, DEBUG_GET_IMAGES);
             }
         });
     }
 
-    public void checkCommentsAndDeletePhoto(final ApiImageOut apiImage) {
+    public void deletePhotoWithComments(final ApiImageOut apiImage) {
         final PhotoViewerApi service = MyApplication.getRetrofit().create(PhotoViewerApi.class);
         service.getComments(MyApplication.getUserInfo().getToken(),
                 apiImage.getId(),
-                0).enqueue(new Callback<ApiResponse<List<ApiCommentOut>>>() {
+                0).enqueue(new Callback<ApiResponseSuccess<List<ApiCommentOut>>>() {
             @Override
-            public void onResponse(@NonNull Call<ApiResponse<List<ApiCommentOut>>> call,
-                                   @NonNull Response<ApiResponse<List<ApiCommentOut>>> response) {
-                if (response.errorBody() == null) {
-                    if (response.body().data.size() != 0) {
+            public void onResponse(@NonNull Call<ApiResponseSuccess<List<ApiCommentOut>>> call,
+                                   @NonNull Response<ApiResponseSuccess<List<ApiCommentOut>>> response) {
+                if (response.isSuccessful()) {
+                    List<ApiCommentOut> comments = response.body().data;
+                    if (comments.size() != 0) {
                         getViewState().onHasConnectedComments();
                         try {
-                            if (!deleteComments(service, apiImage, response.body().data)) {
-                                getViewState().onFailedQuery("Some comments failed to delete");
+                            if (!deleteComments(service, apiImage, comments)) {
                                 return;
                             }
                         } catch (InterruptedException e) {
                             e.printStackTrace();
+                            Log.e(LABEL_DEBUG, EXCEPTION_DELETE_IMAGE);
                             return;
                         }
                     }
 
                     deletePhoto(service, apiImage);
                 } else {
-                    getViewState().onFailedQuery("Error while getting comments");
+                    ApiResponseError errorResponse = ErrorResponseCreator.create(response);
+                    if (errorResponse != null)
+                        getViewState().onErrorResponse(errorResponse.getError());
                 }
             }
 
             @Override
-            public void onFailure(@NonNull Call<ApiResponse<List<ApiCommentOut>>> call,
+            public void onFailure(@NonNull Call<ApiResponseSuccess<List<ApiCommentOut>>> call,
                                   @NonNull Throwable t) {
-
+                getViewState().onFailedQuery();
+                Log.d(LABEL_DEBUG, DEBUG_GET_COMMENTS);
             }
         });
     }
@@ -130,6 +147,7 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
             deletedAll = future.get();
         } catch (ExecutionException e) {
             e.printStackTrace();
+            Log.e(LABEL_DEBUG, "Error in future.get()");
         }
         executor.shutdown();
         return deletedAll;
@@ -139,43 +157,50 @@ public class PhotosPresenter extends MvpPresenter<PhotosView> {
                                ApiImageOut apiImage,
                                ApiCommentOut apiComment) {
 
-        Call<ApiResponse<ApiCommentOut>> call =
+        Call<ApiResponseSuccess<ApiCommentOut>> call =
                 service.deleteComment(MyApplication.getUserInfo().getToken(),
                         apiComment.getId(),
                         apiImage.getId());
-        Response<ApiResponse<ApiCommentOut>> response;
+        Response<ApiResponseSuccess<ApiCommentOut>> response;
         try {
             response = call.execute();
-            return response.errorBody() == null;
+            if (response.isSuccessful())
+                return true;
+            ApiResponseError errorResponse = ErrorResponseCreator.create(response);
+            if (errorResponse != null)
+                getViewState().onErrorResponse(errorResponse.getError());
         } catch (IOException e) {
             e.printStackTrace();
-            return false;
+            Log.e(LABEL_DEBUG, EXCEPTION_DELETE_COMMENT);
         }
 
+        return false;
     }
 
     private void deletePhoto(final PhotoViewerApi service,
                              final ApiImageOut apiImage) {
 
         service.deleteImage(MyApplication.getUserInfo().getToken(),
-                apiImage.getId()).enqueue(new Callback<ApiResponse<ApiImageOut>>() {
+                apiImage.getId()).enqueue(new Callback<ApiResponseSuccess<ApiImageOut>>() {
             @Override
-            public void onResponse(@NonNull Call<ApiResponse<ApiImageOut>> call,
-                                   @NonNull Response<ApiResponse<ApiImageOut>> response) {
+            public void onResponse(@NonNull Call<ApiResponseSuccess<ApiImageOut>> call,
+                                   @NonNull Response<ApiResponseSuccess<ApiImageOut>> response) {
 
-                if (response.errorBody() == null) {
+                if (response.isSuccessful()) {
                     getViewState().onSuccessQuery();
                     getViewState().refreshPhotosOnDelete(apiImage);
                 } else {
-
-                    getViewState().onFailedQuery(null);
+                    ApiResponseError errorResponse = ErrorResponseCreator.create(response);
+                    if (errorResponse != null)
+                        getViewState().onErrorResponse(errorResponse.getError());
                 }
             }
 
             @Override
-            public void onFailure(@NonNull Call<ApiResponse<ApiImageOut>> call,
+            public void onFailure(@NonNull Call<ApiResponseSuccess<ApiImageOut>> call,
                                   @NonNull Throwable t) {
-                getViewState().onFailedQuery(null);
+                getViewState().onFailedQuery();
+                Log.d(LABEL_DEBUG, DEBUG_DELETE_IMAGE);
             }
         });
     }

@@ -1,21 +1,27 @@
 package com.example.onlinephotoviewer.mvp.presenters;
 
 import android.support.annotation.NonNull;
-import android.text.TextUtils;
+import android.util.Log;
 
 import com.arellomobile.mvp.InjectViewState;
 import com.arellomobile.mvp.MvpPresenter;
-import com.example.onlinephotoviewer.R;
 import com.example.onlinephotoviewer.app.MyApplication;
 import com.example.onlinephotoviewer.app.PhotoViewerApi;
-import com.example.onlinephotoviewer.mvp.models.ApiResponse;
+import com.example.onlinephotoviewer.mvp.models.response.ApiResponseErrorAuth;
+import com.example.onlinephotoviewer.mvp.models.response.ApiResponseSuccess;
 import com.example.onlinephotoviewer.mvp.models.SignUserOut;
 import com.example.onlinephotoviewer.mvp.models.SignUserIn;
 import com.example.onlinephotoviewer.mvp.views.LoginView;
+import com.example.onlinephotoviewer.utils.ErrorResponseCreator;
+
+import java.util.Locale;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+
+import static com.example.onlinephotoviewer.app.MyApplication.getRetrofit;
+import static com.example.onlinephotoviewer.utils.ErrorResponseCreator.LOG_STATUS;
 
 /**
  * Created by Andrei on 29.03.2018.
@@ -24,52 +30,55 @@ import retrofit2.Response;
 @InjectViewState
 public class LoginPresenter extends MvpPresenter<LoginView> {
 
+    public static String getLabelDebug() {
+        return LABEL_DEBUG;
+    }
+
+    private static final String LABEL_DEBUG = "Login debug";
+
+
     public LoginPresenter() {
 
     }
 
     public void signIn(String login, String password) {
-        int emailError = -1;
-        int passwordError = -1;
 
         getViewState().hideFormError();
-
-        if (TextUtils.isEmpty(login)) {
-            emailError = R.string.error_field_required;
-        }
-
-        if (TextUtils.isEmpty(password)) {
-            passwordError = R.string.error_invalid_password;
-        }
-
-        if (emailError != -1 || passwordError != -1) {
-            getViewState().showFormError(emailError, passwordError);
-            return;
-        }
-
         getViewState().startSignIn();
 
         SignUserIn user = new SignUserIn(login, password);
-        PhotoViewerApi service = MyApplication.getRetrofit().create(PhotoViewerApi.class);
-        Call<ApiResponse<SignUserOut>> call = service.signIn(user);
-        call.enqueue(new Callback<ApiResponse<SignUserOut>>() {
+        PhotoViewerApi service = getRetrofit().create(PhotoViewerApi.class);
+        Call<ApiResponseSuccess<SignUserOut>> call = service.signIn(user);
+        call.enqueue(new Callback<ApiResponseSuccess<SignUserOut>>() {
             @Override
-            public void onResponse(@NonNull Call<ApiResponse<SignUserOut>> call, @NonNull Response<ApiResponse<SignUserOut>> response) {
+            public void onResponse(@NonNull Call<ApiResponseSuccess<SignUserOut>> call,
+                                   @NonNull Response<ApiResponseSuccess<SignUserOut>> response) {
                 getViewState().finishSignIn();
 
-                if (response.errorBody() == null) {
-                    ApiResponse<SignUserOut> apiResponse = response.body();
+                if (response.isSuccessful()) {
+                    ApiResponseSuccess<SignUserOut> apiResponse = response.body();
                     MyApplication.setUserInfo(apiResponse.data);
                     getViewState().successSignIn();
                 } else {
-                    getViewState().failedSignIn("Incorrect data");
+                    ApiResponseErrorAuth errorResponse =
+                            ErrorResponseCreator.createForAuth(response, LABEL_DEBUG);
+                    Log.d(LABEL_DEBUG, String.format(Locale.getDefault(),
+                            LOG_STATUS,
+                            errorResponse.getStatus(),
+                            errorResponse.getError()));
+
+                    if (errorResponse.getErrorsList() != null)
+                        getViewState().failedSignIn(errorResponse.getErrorsList());
+                    else
+                        getViewState().failedSignIn(errorResponse.getError());
                 }
             }
 
             @Override
-            public void onFailure(@NonNull Call<ApiResponse<SignUserOut>> call, @NonNull Throwable t) {
+            public void onFailure(@NonNull Call<ApiResponseSuccess<SignUserOut>> call, @NonNull Throwable t) {
+                Log.d(LABEL_DEBUG, t.getMessage());
+                getViewState().failedQuery();
                 getViewState().finishSignIn();
-                getViewState().failedSignIn(t.getMessage());
             }
         });
     }

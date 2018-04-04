@@ -210,7 +210,7 @@ public class ImagesAdapter extends RecyclerView.Adapter<ImagesAdapter.ViewHolder
             ActivityOptionsCompat options =
                     ActivityOptionsCompat.makeSceneTransitionAnimation(
                             (Activity) context,
-                            Pair.create((View) iv, "imagest"));
+                            Pair.create((View) iv, context.getString(R.string.var_transition_photo)));
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             ((BitmapDrawable)iv.getDrawable()).getBitmap()
                     .compress(Bitmap.CompressFormat.JPEG, 100, stream);

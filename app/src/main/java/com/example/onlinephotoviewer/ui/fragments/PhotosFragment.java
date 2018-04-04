@@ -126,7 +126,7 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
 
     @Override
     public void onHasConnectedComments() {
-        Toast.makeText(getActivity(), "Deleting comments...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getActivity(), R.string.warning_deleting_comments, Toast.LENGTH_SHORT).show();
     }
 
     private void toggleLoading(boolean toggle) {
@@ -155,8 +155,13 @@ public class PhotosFragment extends MvpAppCompatFragment implements PhotosView {
     }
 
     @Override
-    public void onFailedQuery(String message) {
-        Toast.makeText(getActivity(), "Failed", Toast.LENGTH_SHORT).show();
+    public void onErrorResponse(String message) {
+        if (message != null)
+            Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+    }
+
+    public void onFailedQuery() {
+        Toast.makeText(getActivity(), R.string.warning_failed, Toast.LENGTH_SHORT).show();
     }
 
     @Override

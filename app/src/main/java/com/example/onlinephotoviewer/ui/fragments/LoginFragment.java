@@ -3,6 +3,7 @@ package com.example.onlinephotoviewer.ui.fragments;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,16 +15,23 @@ import com.arellomobile.mvp.MvpAppCompatFragment;
 import com.arellomobile.mvp.presenter.InjectPresenter;
 import com.example.onlinephotoviewer.R;
 import com.example.onlinephotoviewer.app.MyApplication;
+import com.example.onlinephotoviewer.mvp.models.response.ApiError;
 import com.example.onlinephotoviewer.mvp.presenters.LoginPresenter;
 import com.example.onlinephotoviewer.mvp.views.LoginView;
 import com.example.onlinephotoviewer.ui.activities.MainActivity;
 import com.example.onlinephotoviewer.ui.activities.SignActivity;
+
+import java.util.ArrayList;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
 public class LoginFragment extends MvpAppCompatFragment implements LoginView {
+
+    private final static String field_login = "login";
+    private final static String field_password = "password";
+
 
     @BindView(R.id.progress_bar)
     ProgressBar mProgressView;
@@ -39,6 +47,7 @@ public class LoginFragment extends MvpAppCompatFragment implements LoginView {
 
     @InjectPresenter
     LoginPresenter mLoginPresenter;
+
 
     public LoginFragment() {
 
@@ -78,12 +87,35 @@ public class LoginFragment extends MvpAppCompatFragment implements LoginView {
     }
 
     @Override
+    public void failedSignIn(ArrayList<ApiError> errors) {
+        String loginError = null;
+        String passwordError = null;
+        for (ApiError e : errors) {
+            switch (e.getField()) {
+                case field_login: {
+                    loginError = e.getMessage();
+                    break;
+                }
+                case field_password: {
+                    passwordError = e.getMessage();
+                    break;
+                }
+            }
+        }
+
+        showFormError(loginError, passwordError);
+    }
+
     public void failedSignIn(String message) {
+        Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void failedQuery() {
         if (!((MyApplication)getActivity().getApplication()).isOnline()) {
             Toast.makeText(getActivity(), R.string.warning_offline, Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
         }
+        Log.d(LoginPresenter.getLabelDebug(), getString(R.string.warning_failed));
     }
 
     @Override
@@ -93,9 +125,9 @@ public class LoginFragment extends MvpAppCompatFragment implements LoginView {
     }
 
     @Override
-    public void showFormError(Integer emailError, Integer passwordError) {
-        mLoginView.setError(emailError == null ? null : getString(emailError));
-        mPasswordView.setError(passwordError == null ? null : getString(passwordError));
+    public void showFormError(String loginError, String passwordError) {
+        mLoginView.setError(loginError);
+        mPasswordView.setError(passwordError);
     }
 
     @Override

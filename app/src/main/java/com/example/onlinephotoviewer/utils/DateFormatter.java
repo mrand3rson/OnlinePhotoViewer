@@ -12,6 +12,7 @@ import java.util.Locale;
 public class DateFormatter {
 
     private static final long CONST_DAYS = 86400000L;
+    private static final String DATE_PATTERN = "dd.MM.yyyy";
 
 
     public static int dateToDays (Date date){
@@ -37,7 +38,7 @@ public class DateFormatter {
     }
 
     public static String formatDate(Date date) {
-        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy",
+        SimpleDateFormat sdf = new SimpleDateFormat(DATE_PATTERN,
                 Locale.getDefault());
         return sdf.format(date);
     }

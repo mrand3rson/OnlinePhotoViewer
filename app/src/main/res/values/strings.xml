@@ -5,6 +5,7 @@
     <string name="action_settings">Settings</string>
     <string name="error_field_required">This field is required</string>
     <string name="error_invalid_password">Invalid password</string>
+    <string name="error_password_confirmation">Password confirmation failed</string>
     <string name="label_login">Login:</string>
     <string name="label_password">Password</string>
     <string name="ok">OK</string>
@@ -19,4 +20,9 @@
 
     <string name="warning_offline">Please do this operation while online</string>
     <string name="warning_mode_offline">Application is in offline mode</string>
+    <string name="warning_location">Cannot get location</string>
+    <string name="warning_deleting_comments">Deleting comments…</string>
+    <string name="warning_failed">Failed</string>
+    <string name="var_logged_as">Logged as: %s</string>
+    <string name="var_transition_photo">imagest</string>
 </resources>

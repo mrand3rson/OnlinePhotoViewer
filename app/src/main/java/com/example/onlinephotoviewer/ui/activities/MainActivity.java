@@ -1,13 +1,15 @@
 package com.example.onlinephotoviewer.ui.activities;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
@@ -17,6 +19,7 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -31,8 +34,6 @@ import com.example.onlinephotoviewer.mvp.views.MainView;
 import com.example.onlinephotoviewer.ui.fragments.MapFragment;
 import com.example.onlinephotoviewer.ui.fragments.PhotosFragment;
 
-import java.io.File;
-
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
@@ -40,7 +41,9 @@ import butterknife.OnClick;
 public class MainActivity extends MvpAppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, MainView {
 
+    private final static String DEBUG_SUCCESS_UPLOADING = "SUCCESS uploading";
     private final int TAKE_PHOTO = 0;
+    private final int GOT_GRANTS = 123;
 
     @BindView(R.id.nav_view)
     NavigationView mNavigationView;
@@ -53,10 +56,9 @@ public class MainActivity extends MvpAppCompatActivity
 
     @InjectPresenter
     MainPresenter mMainPresenter;
-
     private Location mLocation;
-    private PhotosFragment mPhotosFragment;
 
+    private PhotosFragment mPhotosFragment;
     private MapFragment mMapFragment;
 
 
@@ -69,6 +71,7 @@ public class MainActivity extends MvpAppCompatActivity
         }
     }
 
+    @SuppressLint("StringFormatInvalid")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,7 +87,7 @@ public class MainActivity extends MvpAppCompatActivity
 
 
         TextView mUserName = mNavigationView.getHeaderView(0).findViewById(R.id.user_name);
-        mUserName.setText(String.format("Logged as: %s", MyApplication.getUserInfo().getLogin()));
+        mUserName.setText(getString(R.string.var_logged_as, MyApplication.getUserInfo().getLogin()));
 
         mNavigationView.setNavigationItemSelectedListener(this);
         onNavigationItemSelected(mNavigationView.getMenu().getItem(0));
@@ -123,11 +126,19 @@ public class MainActivity extends MvpAppCompatActivity
     @OnClick(R.id.fab)
     public void takePhoto() {
         if (((MyApplication)getApplication()).isOnline()) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    requestPermissions(new String[] {Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION}, GOT_GRANTS);
+                }
+                return;
+            }
+
             listenLocation();
 
-            Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
-            Uri fileUri = mMainPresenter.getOutputMediaFileUri();
-            intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
+            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             startActivityForResult(intent, TAKE_PHOTO);
         } else {
             Toast.makeText(this, R.string.warning_mode_offline, Toast.LENGTH_SHORT).show();
@@ -173,44 +184,47 @@ public class MainActivity extends MvpAppCompatActivity
                         != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
+
+                Bitmap photo = (Bitmap) data.getExtras().get("data");
+
                 if (mLocation != null)
-                    mMainPresenter.uploadImage(mLocation);
+                    mMainPresenter.uploadImage(photo, mLocation);
                 else {
                     LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
                     Location location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
                     if (location != null) {
-                        mMainPresenter.uploadImage(location);
+                        mMainPresenter.uploadImage(photo, location);
                     }
                     else {
-                        Toast.makeText(this, "Cannot get location", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.warning_location, Toast.LENGTH_SHORT).show();
                     }
                 }
+            } else if (requestCode == GOT_GRANTS) {
+                takePhoto();
             }
         }
     }
 
     @Override
-    public void deleteTempPhoto(File file) {
-        if (!file.delete()) {
-            Toast.makeText(this, "Temp file is not deleted!", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    @Override
     public void onSuccessUploading(ApiImageOut apiImage) {
-//        Toast.makeText(this, "SUCCESS uploading", Toast.LENGTH_SHORT).show();
+        Log.d(MainPresenter.getLabelDebug(), DEBUG_SUCCESS_UPLOADING);
         mPhotosFragment.addImage(apiImage);
     }
 
     @Override
     public void onFailedUploading(String message) {
+        Toast.makeText(this, R.string.warning_failed, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onErrorResponse(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
     public void deletePhoto(ApiImageOut apiImageOut) {
         if (((MyApplication)getApplication()).isOnline()) {
-            mPhotosFragment.getPhotosPresenter().checkCommentsAndDeletePhoto(apiImageOut);
+            mPhotosFragment.getPhotosPresenter().deletePhotoWithComments(apiImageOut);
         } else {
             Toast.makeText(this,
                     getString(R.string.warning_offline),

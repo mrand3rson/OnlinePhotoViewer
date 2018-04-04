@@ -4,6 +4,9 @@ import com.arellomobile.mvp.MvpView;
 import com.arellomobile.mvp.viewstate.strategy.AddToEndSingleStrategy;
 import com.arellomobile.mvp.viewstate.strategy.SkipStrategy;
 import com.arellomobile.mvp.viewstate.strategy.StateStrategyType;
+import com.example.onlinephotoviewer.mvp.models.response.ApiError;
+
+import java.util.ArrayList;
 
 /**
  * Created by Andrei on 30.03.2018.
@@ -12,14 +15,16 @@ import com.arellomobile.mvp.viewstate.strategy.StateStrategyType;
 @StateStrategyType(AddToEndSingleStrategy.class)
 public interface RegistrationView extends MvpView {
     void startSignUp();
-
     void finishSignUp();
 
-    void failedSignUp(String message);
+    void failedQuery(String message);
 
     void hideFormError();
+    void showFormError(String loginError, String passwordError);
+    void showFormError(Integer loginError, Integer passwordError, Integer passwordConfirmationError);
 
-    void showFormError(Integer emailError, Integer passwordError);
+    void failedSignUp(ArrayList<ApiError> errors);
+    void failedSignUp(String message);
 
     @StateStrategyType(SkipStrategy.class)
     void successSignUp();

@@ -137,7 +137,15 @@ public class DetailsActivity extends MvpAppCompatActivity implements DetailsView
     }
 
     @Override
-    public void onFailedQuery(String message) {
+    public void onFailedQuery() {
+        if (!((MyApplication)getApplication()).isOnline()) {
+            Toast.makeText(this, R.string.warning_offline, Toast.LENGTH_SHORT).show();
+        } else
+            Toast.makeText(this, R.string.warning_failed, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onErrorResponse(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 

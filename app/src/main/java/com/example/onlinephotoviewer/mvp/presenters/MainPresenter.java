@@ -3,9 +3,8 @@ package com.example.onlinephotoviewer.mvp.presenters;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
-import android.net.Uri;
-import android.os.Environment;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import com.arellomobile.mvp.InjectViewState;
 import com.arellomobile.mvp.MvpPresenter;
@@ -13,12 +12,15 @@ import com.example.onlinephotoviewer.app.MyApplication;
 import com.example.onlinephotoviewer.app.PhotoViewerApi;
 import com.example.onlinephotoviewer.mvp.models.ApiImageIn;
 import com.example.onlinephotoviewer.mvp.models.ApiImageOut;
-import com.example.onlinephotoviewer.mvp.models.ApiResponse;
+import com.example.onlinephotoviewer.mvp.models.response.ApiResponseError;
+import com.example.onlinephotoviewer.mvp.models.response.ApiResponseSuccess;
 import com.example.onlinephotoviewer.mvp.views.MainView;
 import com.example.onlinephotoviewer.utils.Base64Formatter;
 import com.example.onlinephotoviewer.utils.DateFormatter;
+import com.example.onlinephotoviewer.utils.ErrorResponseCreator;
 
-import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.Calendar;
 
 import retrofit2.Call;
@@ -32,38 +34,16 @@ import retrofit2.Response;
 @InjectViewState
 public class MainPresenter extends MvpPresenter<MainView> {
 
-    public String getFileName() {
-        return fileName;
+    public static String getLabelDebug() {
+        return LABEL_DEBUG;
     }
 
-    private final String fileName = "photo.jpg";
+    private final static String LABEL_DEBUG = "Main debug";
 
 
-    public Uri getOutputMediaFileUri(){
-        return Uri.fromFile(getOutputMediaFile());
-    }
-
-    private File getOutputMediaFile(){
-
-        File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES).getPath());
-        if (!mediaStorageDir.exists()) {
-            if (!mediaStorageDir.mkdirs()) {
-                return null;
-            }
-        }
-
-        return new File(mediaStorageDir.getPath() + File.separator + fileName);
-    }
-
-    public void uploadImage(Location location) {
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inSampleSize = 4;
-        File file = getOutputMediaFile();
-        Bitmap bmp = BitmapFactory.decodeFile(file.getPath(), options);
-
-        String encodedImage = Base64Formatter.convertToBase64(bmp);
-        getViewState().deleteTempPhoto(file);
+    public void uploadImage(Bitmap originalBitmap, Location location) {
+        Bitmap smallImage = getSmallBitmap(originalBitmap);
+        String encodedImage = Base64Formatter.convertToBase64(smallImage);
 
         double latitude = location.getLatitude();
         double longitude = location.getLongitude();
@@ -75,22 +55,40 @@ public class MainPresenter extends MvpPresenter<MainView> {
                 longitude);
 
         PhotoViewerApi service = MyApplication.getRetrofit().create(PhotoViewerApi.class);
-        Call<ApiResponse<ApiImageOut>> call = service.addImage(MyApplication.getUserInfo().getToken(), apiImageIn);
-        call.enqueue(new Callback<ApiResponse<ApiImageOut>>() {
+        Call<ApiResponseSuccess<ApiImageOut>> call = service.addImage(MyApplication.getUserInfo().getToken(), apiImageIn);
+        call.enqueue(new Callback<ApiResponseSuccess<ApiImageOut>>() {
             @Override
-            public void onResponse(@NonNull Call<ApiResponse<ApiImageOut>> call, @NonNull Response<ApiResponse<ApiImageOut>> response) {
-                if (response.body() != null) {
+            public void onResponse(@NonNull Call<ApiResponseSuccess<ApiImageOut>> call,
+                                   @NonNull Response<ApiResponseSuccess<ApiImageOut>> response) {
+                if (response.isSuccessful()) {
                     ApiImageOut apiImage = response.body().data;
                     getViewState().onSuccessUploading(apiImage);
                 } else {
-                    getViewState().onFailedUploading("");
+                    ApiResponseError errorResponse = ErrorResponseCreator.create(response);
+                    if (errorResponse != null) {
+                        getViewState().onErrorResponse(errorResponse.getError());
+                    }
                 }
             }
 
             @Override
-            public void onFailure(@NonNull Call<ApiResponse<ApiImageOut>> call, @NonNull Throwable t) {
+            public void onFailure(@NonNull Call<ApiResponseSuccess<ApiImageOut>> call,
+                                  @NonNull Throwable t) {
+                Log.d(LABEL_DEBUG, t.getMessage());
                 getViewState().onFailedUploading(t.getMessage());
             }
         });
+    }
+
+    private Bitmap getSmallBitmap(Bitmap originalBitmap) {
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inSampleSize = 4;
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        originalBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        byte[] bmpArray = stream.toByteArray();
+
+        return BitmapFactory.decodeByteArray(bmpArray,
+                0, bmpArray.length, options);
     }
 }

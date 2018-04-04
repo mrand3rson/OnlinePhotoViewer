@@ -15,8 +15,11 @@ import java.util.List;
 public interface DetailsView extends MvpView {
     void startLoadingComments();
     void finishLoadingComments();
-    void onFailedQuery(String message);
+
+    void onFailedQuery();
     void onSuccessQuery();
+
+    void onErrorResponse(String message);
 
     void addComment();
     void viewComments(List<ApiCommentOut> comments);

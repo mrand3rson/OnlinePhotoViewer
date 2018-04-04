@@ -17,7 +17,8 @@ public interface PhotosView extends MvpView {
     void finishLoadingData();
 
     void onSuccessQuery();
-    void onFailedQuery(String message);
+    void onFailedQuery();
+    void onErrorResponse(String message);
 
     void viewImages(int page);
     void addImage(ApiImageOut apiImage);
