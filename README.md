@@ -8,6 +8,6 @@ An application using server API to store and get the photos made by user.
 
 3) User can add/delete comments to/from a specific photo image.
 
-4) The map displays all photos made by the user.
+4) All photos are shown on Google Map due to its location.
 
 5) Application can be used offline with last signed user's credentials.
