@@ -1,5 +1,5 @@
 # OnlinePhotoViewer
-An application using server API to store and get the photos user made. 
+An application using server API to store and get the photos made by user. 
 ## Features
 
 1) User need to register and log in for using the app.
